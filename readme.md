@@ -8,7 +8,7 @@ The user can select the number of fragments by selecting the number of threads w
 ***Capable of Downloading multiple files simulataneously.***  
 
 ***Things Used***:
-1. Python-tkinter(GUI)
+1.Python-tkinter(GUI)
 
 2.Multithreading for asynchronous operations
 
@@ -16,11 +16,15 @@ The user can select the number of fragments by selecting the number of threads w
 
 
 ***How to Run***:
+
 Just clone the repo and run the command 
+
 ***python Multi_Downloader.py***
 
 A GUI will open 
-Enter the url ,select the number of threads,enter the directory (if you dont do no problem the file will be saved on the current directory) and press the download button.(HERE YOU GO)
+
+Enter the url ,select the number of threads,enter the directory (if you dont do no problem the file will be saved on the current 
+directory) and press the download button.(HERE YOU GO)
 
 For Downloading Multiple Files simultaneously just add each url one after the other without waiting for the previous downloads to finish 
 
