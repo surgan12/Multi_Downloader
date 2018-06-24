@@ -11,7 +11,9 @@ The user can select the number of fragments by selecting the number of threads w
 ***Things Used***:
 
 1.Python-tkinter(GUI)
+
 2.Multithreading for asynchronous operations
+
 3.urrlib2 for http connections
 
 
@@ -22,7 +24,7 @@ Just clone the repo and run the command
 
 A GUI will open 
 
-Enter the url ,select the number of threads,enter the directory (if you dont do no problem the file will be saved on the current 
+Enter the url , select the number of threads , enter the directory (if you dont do this no problem the file will be saved on the current 
 directory) and press the download button.(HERE YOU GO)
 
 For Downloading Multiple Files simultaneously just add each url one after the other without waiting for the previous downloads to finish 
