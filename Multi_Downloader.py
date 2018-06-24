@@ -50,11 +50,12 @@ def threaded_download(start,end,file,downloaded_status,url,size):
 
 	except uri.HTTPError,e:
 		status.insert(END,'\n')
-		status.insert(END,'HTTPError'+str(e.code))
+		status.insert(END,file+': HTTPError'+str(e.code))
 
 	except uri.URLError,e:
 		status.insert(END,'\n')
-		status.insert(END,'HTTPError'+str(e,code))
+
+		status.insert(END,file+': HTTPError'+str(e,code))
 
     	
 def creating_thread(start,end,file,downloaded_status,threads,url,size):
@@ -76,40 +77,43 @@ def download(url_enter,number):
 	Directory.delete(0,'end')
 
 	url=url_enter.get()
-	if not os.path.isdir(drect):
-		status.insert(END,"Invalid Directory")
+	if not os.path.isdir(drect) and len(drect)!=0:
+		status.insert(END, url+ ": Invalid Directory \n")
 
-	url_enter.delete(0,'end') #clearing the entry 	
-	try:
+	else:
+		url_enter.delete(0,'end') #clearing the entry 	
+		try:
 
-		file=uri.urlopen(url)
-		filename=get_file_name(url) 
-		size=int(file.headers['content-length'])
-		part=size/number
-		path=Directory.get()
-		filename=os.path.join(path,filename)
-		oho=open(filename,"wb")
-		oho.write('\0'*size) 	
-		oho.close()
-		st=time.clock()
-		for i in range(0,number):
-			start=part*i
-			end=part+start
-			creating_thread(start,end,filename,downloaded_status,threads,url,size)
+			file=uri.urlopen(url)
+			filename=get_file_name(url) 
+			size=int(file.headers['content-length'])
+			part=size/number
+			path=drect
+			filename=os.path.join(path,filename)
+			oho=open(filename,"wb")
+			oho.write('\0'*size) 	
+			oho.close()
+			st=time.clock()
+			status.insert(END,'\n')
+			status.insert(END,'Downloading {}'.format(filename))
+			for i in range(0,number):
+				start=part*i
+				end=part+start
+				creating_thread(start,end,filename,downloaded_status,threads,url,size)
 		
-		for t in threads:
-			t.join()  	
+			for t in threads:
+				t.join()  	
 	
-		status.insert(END,'\n')
+			done.insert(END,'\n')
 	
-		stat="Successfully downloaded {} Time taken : {} seconds".format(filename,time.clock()-st)
-		status.insert(END,stat)	
-	except uri.URLError,e:
-		status.insert(END,'\n')
-		status.insert(END,'HTTPError'+str(e.code))
-	except uri.HTTPError,e:
-		status.insert(END,'\n')
-		status.insert(END,'HTTPError'+str(e.code))
+			stat="Downloaded {} Time taken : {} seconds".format(filename,time.clock()-st)
+			done.insert(END,stat)	
+		except uri.URLError,e:
+			status.insert(END,'\n')
+			status.insert(END,filename +': HTTPError'+str(e.code))
+		except uri.HTTPError,e:
+			status.insert(END,'\n')
+			status.insert(END,filename +': HTTPError'+str(e.code))
 
 
 #creating a window
@@ -126,10 +130,10 @@ url_enter.place(x=30,y=50)
 url.configure(font="bold")
 
 Dir_Label=tkinter.Label(text="DIRECTORY",font="bold")
-Dir_Label.place(x=580,y=180)
+Dir_Label.place(x=590,y=180)
 Dir_Label.configure(bg="light yellow",fg="black")
 Directory=tkinter.Entry(window)
-Directory.place(x=580,y=200)
+Directory.place(x=590,y=200)
  
 number=tkinter.IntVar() #variable for number of threads
 go=tkinter.Button(window,text="Download",command=lambda:download_request(url_enter,number))
@@ -138,9 +142,14 @@ go.configure(bg="light yellow",foreground="black")
 go.configure(font="bold")
 go.configure(highlightbackground="black")
 #textbox for getting the status of downloaded items 
-status=tkinter.Text(window,height=600)
+status=tkinter.Text(window,height=600,width=40)
 status.place(x=0,y=100)	
 status.configure(bg="light yellow",fg="black")
+
+#textbox for downloaded files 
+done=tkinter.Text(window,height=600,width=40)
+done.place(x=300,y=100)
+
 
 scrollbar=Scrollbar(window)
 scrollbar.pack(side=RIGHT,fill=Y)
@@ -170,9 +179,9 @@ Option.configure(bg="light yellow",fg="black",font="bold")
 Option.configure(highlightbackground="black")
 
 if(internet_on):
-	status.insert(END,"Network status :Connected")
+	status.insert(END,"Network status :Connected \n")
 else:
-	status.insert(END,"Check Network Connection")
+	status.insert(END,"Check Network Connection \n")
 
 
 window.mainloop()
