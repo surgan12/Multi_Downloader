@@ -11,14 +11,22 @@ from tkinter import END,LEFT,BOTH
 from PIL import Image, ImageTk
 import httplib
 import urlparse
+from zipfile import ZipFile
+import gzip 
+import shutil
+ 
+def internet_on(net_Var):
+	while (True):
+		for timeout in [1,5,10]:
+			try:
+				response=uri.urlopen('http://google.com',timeout=timeout)
+				network.configure(text="ONLINE")
 
-def internet_on():
-    for timeout in [1,5,10,15]:
-        try:
-            response=urllib2.urlopen('http://google.com',timeout=timeout)
-            return True
-        except urllib2.URLError as err: pass
-    return False
+
+			except uri.URLError as err: pass
+    	
+    	network.configure(text="OFFLINE")
+    	time.sleep(10000)
 
 def check_valid_url(url):
 	try:
@@ -32,7 +40,9 @@ def get_file_name(url):
 	url=url.split('/')
 	return url[-1] #last element will give the name of the file 
 
-def threaded_download(start,end,file,downloaded_status,url,size):
+
+def threaded_download(start,end,file,downloaded_status,url,size,time_taken):
+	get=time.clock()
 	chunk={'Range':'bytes={}-{}'.format(start,end)}
 	req=uri.Request(url,headers=chunk)
 	try: 
@@ -47,7 +57,8 @@ def threaded_download(start,end,file,downloaded_status,url,size):
 
 				fp.write(data) 	
 				downloaded_status[0]+=len(data)
-
+		time_taken[0]+=time.clock()-get
+	
 	except uri.HTTPError,e:
 		status.insert(END,'\n')
 		status.insert(END,file+': HTTPError'+str(e.code))
@@ -58,8 +69,8 @@ def threaded_download(start,end,file,downloaded_status,url,size):
 		status.insert(END,file+': HTTPError'+str(e,code))
 
     	
-def creating_thread(start,end,file,downloaded_status,threads,url,size):
-	t1=threading.Thread(target=threaded_download,args=(start,end,file,downloaded_status,url,size))
+def creating_thread(start,end,file,downloaded_status,threads,url,size,time_taken):
+	t1=threading.Thread(target=threaded_download,args=(start,end,file,downloaded_status,url,size,time_taken))
 	t1.start()
 	threads.append(t1)
 
@@ -75,7 +86,7 @@ def download(url_enter,number):
 	downloaded_status=[0]
 	drect=Directory.get()
 	Directory.delete(0,'end')
-
+	time_taken=[0]
 	url=url_enter.get()
 	if not os.path.isdir(drect) and len(drect)!=0:
 		status.insert(END, url+ ": Invalid Directory \n")
@@ -99,29 +110,72 @@ def download(url_enter,number):
 			for i in range(0,number):
 				start=part*i
 				end=part+start
-				creating_thread(start,end,filename,downloaded_status,threads,url,size)
+				creating_thread(start,end,filename,downloaded_status,threads,url,size,time_taken)
 		
 			for t in threads:
 				t.join()  	
 	
-			done.insert(END,'\n')
-	
-			stat="Downloaded {} Time taken : {} seconds".format(filename,time.clock()-st)
-			done.insert(END,stat)	
+			
+			global count
+			count=count+1
+			
+			done.insert(count,str(count)+'. '+filename+' ETA: '+str(time_taken[0])+'s')	
 		except uri.URLError,e:
 			status.insert(END,'\n')
 			status.insert(END,filename +': HTTPError'+str(e.code))
 		except uri.HTTPError,e:
 			status.insert(END,'\n')
 			status.insert(END,filename +': HTTPError'+str(e.code))
+def tick():
+    global time1
+    # get the current local time from the PC
+    time2 = time.strftime('%H:%M:%S')
+    # if time string has changed, update it
+    if time2 != time1:
+        time1 = time2
+        clock.config(text=time2)
+        # calls itself every 200 milliseconds
+        # to update the time display as needed
+        # could use >200 ms, but display gets jerky
+    clock.after(200, tick)
 
+def popup(event):
+	menu.tk_popup(event.x_root,event.y_root)
+
+def CurSelet(event):
+    widget = event.widget
+    selection=widget.curselection()
+    picked = widget.get(selection)
+    picked=picked.strip()
+    picked=picked.split()
+    Menu_var.set(picked[1])
+
+def delete(Menu_var):
+	file=Menu_var.get()
+	os.remove(file)
+	status.insert(END,'\n')
+	status.insert(END,file+" Deleted ")
+def compress(Menu_var):
+	file=Menu_var.get()
+	orignal=file
+	file=file.split('.')
+	file=file[0]+'.gz'
+	with open(orignal,'rb')as inp:
+		with open(file,'wb')as output:
+			with gzip.GzipFile(file,'wb',fileobj=output)as output:
+				shutil.copyfileobj(inp,output)
+	status.insert(END,'\n')
+	status.insert(END,orignal+" gzipped as "+file+'\n')
 
 #creating a window
 window=tkinter.Tk()
 window.title("Downloader")
 window.geometry("800x600")
 window.configure(bg="LemonChiffon3")
-	
+img = tkinter.PhotoImage(file = 'down.ico')
+window.tk.call('wm', 'iconphoto', window._w, img)
+count=0 #for number of Downloads
+
 url=tkinter.Label(window,text="URL")
 url.configure(bg="light yellow",foreground="black")
 url.place(x=0,y=50)
@@ -147,9 +201,10 @@ status.place(x=0,y=100)
 status.configure(bg="light yellow",fg="black")
 
 #textbox for downloaded files 
-done=tkinter.Text(window,height=600,width=40)
+done=tkinter.Listbox(window,height=600,width=35)
 done.place(x=300,y=100)
-
+done.bind("<Button-3>",popup)
+done.bind('<<ListboxSelect>>',CurSelet)
 
 scrollbar=Scrollbar(window)
 scrollbar.pack(side=RIGHT,fill=Y)
@@ -178,11 +233,38 @@ Option.place(x=640,y=5)
 Option.configure(bg="light yellow",fg="black",font="bold")
 Option.configure(highlightbackground="black")
 
+time1=' '
+
 if(internet_on):
 	status.insert(END,"Network status :Connected \n")
 else:
 	status.insert(END,"Check Network Connection \n")
 
+#inserting a clock and running in background
+clock = Label(window, font=('times', 15, 'bold'), bg='white')
+clock.place(x=10,y=5)
+clock_thread=threading.Thread(target=tick(),args=())
+clock_thread.start()
 
+Downloads=Label(window,text="Downloads",bg='light yellow')
+Downloads.place(x=340,y=80)
+
+Menu_var=tkinter.StringVar()
+#Right click menu for the listitems in the downloads section
+menu=tkinter.Menu(window,tearoff=0)
+menu.add_command(label="Compress",command=lambda:compress(Menu_var))
+menu.add_separator()
+menu.add_command(label="Delete",command=lambda:delete(Menu_var))
+menu.bind("<FocusOut>",menu.unpost())
+menu.configure(bg="white")
+
+#checking network status
+net_Var=tkinter.StringVar()
+
+network=tkinter.Label(window,text="Connection:",font="BOLD")
+t1=threading.Thread(target=internet_on,args=(net_Var,))
+t1.start()
+network.configure(bg="light yellow")
+network.place(x=590,y=550)
 window.mainloop()
 
