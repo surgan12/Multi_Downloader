@@ -32,12 +32,13 @@ For Downloading Multiple Files simultaneously just add each url one after the ot
 ***You can also compress the downloaded file***
  
  To do so :
+ 
  After downloading,the downloaded file will appear under the downloads section , right click on the file and click compress.
  A gzip file of your file would be created .
  
  To unzip use the following command:
  
- gunzip <filename>
+ gunzip <-filename->
  
  
 
