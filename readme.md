@@ -29,6 +29,13 @@ directory) and press the download button.(HERE YOU GO)
 
 For Downloading Multiple Files simultaneously just add each url one after the other without waiting for the previous downloads to finish 
 
+ **You can also compress the downloaded file **
+ To do so :
+ After downloading the downloaded file appear under the downloads section , right click on the file and click compress.
+ A gzip file of your file would be created 
+ 
+ 
+
 
 Hope you like it.
 
