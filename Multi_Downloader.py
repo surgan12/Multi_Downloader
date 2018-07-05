@@ -15,6 +15,8 @@ from zipfile import ZipFile
 import gzip 
 import shutil
 
+x_pointer=[0]
+y_pointer=[0]
 class CreateToolTip(object):
     '''
     create a tooltip for a given widget
@@ -117,6 +119,7 @@ def download(url_enter,number):
 	time_taken=[0]
 	url=url_enter.get()
 	if not os.path.isdir(drect) and len(drect)!=0:
+		status.insert(END,'\n')
 		status.insert(END, url+ ": Invalid Directory \n")
 
 	else:
@@ -168,6 +171,8 @@ def tick():
     clock.after(200, tick)	
 
 def popup(event):
+	x_pointer[0]=window.winfo_pointerx()-window.winfo_rootx()
+	y_pointer[0]=window.winfo_pointery()-window.winfo_rooty()
 	menu.tk_popup(event.x_root,event.y_root)
 
 def CurSelet(event):
@@ -178,13 +183,15 @@ def CurSelet(event):
     picked=picked.split()
     Menu_var.set(picked[1])
     f=int(picked[0][0])
-    List_var.set(f-1)
-
+    List_var.set(f-1)	
+    
 def delete(Menu_var):
 	file=Menu_var.get()
 	os.remove(file)
 	status.insert(END,'\n')
 	status.insert(END,file+" Deleted ")
+	remove_from_list(List_var)
+	
 def compress(Menu_var):
 	file=Menu_var.get()
 	orignal=file
@@ -209,6 +216,34 @@ def remove_from_list(List_var):
 		done.insert(i,text)
 def clear_status():
 	status.delete('1.0',END)
+
+def help_rename(new,path,ent,lab):
+	text=done.get(List_var.get())
+	text=text.strip()
+	text=text.split()
+	text[1]=new
+	o=""
+	for t in text:
+		o=o+t+" "
+	done.delete(List_var.get())
+	done.insert(List_var.get(),o)
+	window.unbind('<Return>')
+	ent.place_forget()
+	lab.place_forget()
+
+	command="mv "+str(path)+" "+str(new)
+	os.popen(command)
+	
+def rename(path):
+	window.unbind('<Return>')
+	path=path.get()
+	name=tkinter.Entry(window)
+	name.place(x=x_pointer[0],y=y_pointer[0])
+	new=tkinter.Label(text="RENAME")
+	new.configure(bg="light yellow")
+	new.place(x=x_pointer[0]+120,y=y_pointer[0]+1)
+	window.bind('<Return>', lambda x :help_rename(name.get(),path,name,new))
+
 #creating a window
 window=tkinter.Tk()
 window.title("Downloader")
@@ -232,6 +267,7 @@ Directory.place(x=590,y=200)
  
 number=tkinter.IntVar() #variable for number of threads
 go=tkinter.Button(window,text="Download",command=lambda:download_request(url_enter,number))
+window.bind('<Return>',lambda x:download_request(url_enter,number))
 go.place(x=685,y=45)
 go.configure(bg="light yellow",foreground="black")
 go.configure(font="bold")
@@ -294,6 +330,7 @@ Menu_var=tkinter.StringVar()
 List_var=tkinter.IntVar()
 
 #Right click menu for the listitems in the downloads section
+
 menu=tkinter.Menu(window,tearoff=0)
 menu.add_command(label="Compress",command=lambda:compress(Menu_var))
 menu.add_separator()
@@ -301,6 +338,7 @@ menu.add_command(label="Delete",command=lambda:delete(Menu_var))
 menu.add_separator()
 menu.add_command(label="Remove From The List ",command=lambda:remove_from_list(List_var))
 menu.add_separator()
+menu.add_command(label="Rename",command=lambda: rename(Menu_var))
 menu.bind("<FocusOut>",menu.unpost())
 
 menu.configure(bg="white")
