@@ -14,13 +14,36 @@ import urlparse
 from zipfile import ZipFile
 import gzip 
 import shutil
-
+import psutil
+import notify2
+from multiprocessing import Process	
 x_pointer=[0]
 y_pointer=[0]
+fil=['']
+
+def calc_ul_dl( dt=2, interface='wlo1'):
+    t0 = time.time()
+    counter = psutil.net_io_counters(pernic=True)[interface]
+    tot = (counter.bytes_sent, counter.bytes_recv)
+
+    while True:
+        last_tot = tot
+        time.sleep(dt)
+        counter = psutil.net_io_counters(pernic=True)[interface]
+        t1 = time.time()
+        tot = (counter.bytes_sent, counter.bytes_recv)
+        ul, dl = [(now - last) / (t1 - t0) / 1000.0
+                  for now, last in zip(tot, last_tot)]
+        ul=round(ul,3)
+        dl=round(dl,3)
+        upd="Up :"+str(ul)+ "KB/s"
+        up.configure(text=upd)
+        dnd="Down :" +str(dl)+"KB/s"
+        down.configure(text=dnd)
+        t0 = time.time()
+
 class CreateToolTip(object):
-    '''
-    create a tooltip for a given widget
-    '''
+    
     def __init__(self, widget, text='widget info'):
         self.widget = widget
         self.text = text
@@ -86,7 +109,7 @@ def threaded_download(start,end,file,downloaded_status,url,size,time_taken):
 					break
 
 				fp.write(data) 	
-				downloaded_status[0]+=len(data)
+				downloaded_status[0]+=1024
 		time_taken[0]+=time.clock()-get
 	
 	except uri.HTTPError,e:
@@ -98,7 +121,18 @@ def threaded_download(start,end,file,downloaded_status,url,size,time_taken):
 
 		status.insert(END,file+': HTTPError'+str(e,code))
 
-    	
+def download_left(downloaded_status,size,index,filename,time_taken):
+	while (downloaded_status[0])<size:
+		done.delete(index-1)
+		d=downloaded_status[0]*100
+		d=d/size
+		round(d,3)
+		stat="Downloading {}   {}%".format(filename,str(d))
+		done.insert(index-1,stat)
+		time.sleep(2)
+	done.delete(index-1)
+	done.insert(index-1,str(index)+'. '+filename+' ETA: '+str(time_taken[0])+'s')	
+			
 def creating_thread(start,end,file,downloaded_status,threads,url,size,time_taken):
 	t1=threading.Thread(target=threaded_download,args=(start,end,file,downloaded_status,url,size,time_taken))
 	t1.start()
@@ -106,15 +140,16 @@ def creating_thread(start,end,file,downloaded_status,threads,url,size,time_taken
 
 #for multiple download request at the same time
 def download_request(url_enter,number):
-	
-	t1=threading.Thread(target=download,args=(url_enter,number))
+
+	t1=threading.Thread(target=download,args=(url_enter,number,))
 	t1.start()
+
 
 def download(url_enter,number):
 	threads=[]
 	number=number.get()
 	downloaded_status=[0]
-	drect=Directory.get()
+	drect=Directory.get()	
 	Directory.delete(0,'end')
 	time_taken=[0]
 	url=url_enter.get()
@@ -132,6 +167,10 @@ def download(url_enter,number):
 			part=size/number
 			path=drect
 			filename=os.path.join(path,filename)
+			if (check_uniqueness(filename)!=True):
+				filename=fil[0]
+			while (filename==''):
+				filename=fil[0]
 			oho=open(filename,"wb")
 			oho.write('\0'*size) 	
 			oho.close()
@@ -142,15 +181,20 @@ def download(url_enter,number):
 				start=part*i
 				end=part+start
 				creating_thread(start,end,filename,downloaded_status,threads,url,size,time_taken)
-		
+			index=done.size()+1			
+			tr=threading.Thread(target=download_left,args=(downloaded_status,size,index,filename,time_taken))
+			tr.start()		
 			for t in threads:
-				t.join()  	
-	
-			
+				t.join()
+
 			#global count
 			#count=count+1
-			count=done.size()+1
-			done.insert(count,str(count)+'. '+filename+' ETA: '+str(time_taken[0])+'s')	
+			notify2.init("Downloader")
+			message="Downloading finished for "+filename
+			summary="Downloading Finished "
+			n=notify2.Notification(summary, message)
+			n.set_timeout(10000)
+			n.show()
 		except uri.URLError,e:
 			status.insert(END,'\n')
 			status.insert(END,filename +': HTTPError'+str(e.code))
@@ -244,6 +288,25 @@ def rename(path):
 	new.place(x=x_pointer[0]+120,y=y_pointer[0]+1)
 	window.bind('<Return>', lambda x :help_rename(name.get(),path,name,new))
 
+def dest(top,fil,ren):
+	fil[0]=ren.get()
+	top.destroy()
+
+def check_uniqueness(file_path):
+	if (os.path.exists(file_path)):
+		top=Toplevel(window)
+		top.title("File already exists ")
+		top.configure(bg="black")
+		ren=tkinter.Entry(top)
+		ren.insert(0,file_path)
+		ren.pack()
+		button= tkinter.Button(top,text="Rename",command= lambda: dest(top,fil,ren))
+		button.configure(bg="white")
+		button.pack()
+		top.wm_geometry("+%d+%d" % (400, 300))
+		
+	else :
+		return True
 #creating a window
 window=tkinter.Tk()
 window.title("Downloader")
@@ -278,7 +341,7 @@ status.place(x=0,y=100)
 status.configure(bg="light yellow",fg="black")
 
 #textbox for downloaded files 
-done=tkinter.Listbox(window,height=600,width=35)
+done=tkinter.Listbox(window,height=300,width=35)
 done.place(x=300,y=100)
 done.bind("<Button-3>",popup)
 done.bind('<<ListboxSelect>>',CurSelet)
@@ -362,5 +425,16 @@ t1=threading.Thread(target=internet_on,args=(net_Var,))
 t1.start()
 network.configure(bg="light yellow")
 network.place(x=590,y=550)
+
+#fetching the download and upload speed 
+down=tkinter.Label(window,text="Down :",bg="light yellow")
+up=tkinter.Label(window,text="Up :",bg="light yellow")
+down.place(x=580,y=400)
+up.place(x=695,y=400)
+
+speed_thread=threading.Thread(target=calc_ul_dl,args=())
+speed_thread.start()
+
+
 window.mainloop()
 
