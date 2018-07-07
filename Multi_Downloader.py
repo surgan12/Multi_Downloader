@@ -17,6 +17,8 @@ import shutil
 import psutil
 import notify2
 from multiprocessing import Process	
+from multiprocessing import Value,Array #sharing states
+
 x_pointer=[0]
 y_pointer=[0]
 fil=['']
@@ -125,9 +127,11 @@ def download_left(downloaded_status,size,index,filename,time_taken):
 	while (downloaded_status[0])<size:
 		done.delete(index-1)
 		d=downloaded_status[0]*100
+			
 		d=d/size
 		round(d,3)
 		stat="Downloading {}   {}%".format(filename,str(d))
+		
 		done.insert(index-1,stat)
 		time.sleep(2)
 	done.delete(index-1)
@@ -142,11 +146,19 @@ def creating_thread(start,end,file,downloaded_status,threads,url,size,time_taken
 def download_request(url_enter,number):
 
 	t1=threading.Thread(target=download,args=(url_enter,number,))
-	t1.start()
+	t1.start()	
+def down_process(number,part,filename,downloaded_status,url,size,time_taken):
+	threads=[]
+	for i in range(0,number):
+		start=part*i
+		end=part+start
+		creating_thread(start,end,filename,downloaded_status,threads,url,size,time_taken)
+	for t in threads:
+		t.join()
 
 
 def download(url_enter,number):
-	threads=[]
+	
 	number=number.get()
 	downloaded_status=[0]
 	drect=Directory.get()	
@@ -177,21 +189,22 @@ def download(url_enter,number):
 			st=time.clock()
 			status.insert(END,'\n')
 			status.insert(END,'Downloading {}'.format(filename))
-			for i in range(0,number):
-				start=part*i
-				end=part+start
-				creating_thread(start,end,filename,downloaded_status,threads,url,size,time_taken)
+			downloaded_status=Array('i',[0])
+			time_taken=Array('f',[0])
+			first_process=Process(target=down_process,args=(number,part,filename,downloaded_status,url,size,time_taken))
+			first_process.start()
 			index=done.size()+1			
 			tr=threading.Thread(target=download_left,args=(downloaded_status,size,index,filename,time_taken))
 			tr.start()		
-			for t in threads:
-				t.join()
-
+			first_process.join()
+			
 			#global count
 			#count=count+1
 			notify2.init("Downloader")
 			message="Downloading finished for "+filename
 			summary="Downloading Finished "
+			status.insert(END,'\n')
+			status.insert(END,message)
 			n=notify2.Notification(summary, message)
 			n.set_timeout(10000)
 			n.show()
