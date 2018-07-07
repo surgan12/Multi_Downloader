@@ -16,7 +16,7 @@ The user can select the number of fragments by selecting the number of threads w
 
 3.***urrlib2*** for http connections
 
-4. Multiprocessing(PROCESSES) for Downloading various file concurrently
+4.Multiprocessing(PROCESSES) for Downloading various file concurrently
 
 ***How to Run***:
 Just clone the repo and run the command 
