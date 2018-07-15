@@ -18,10 +18,12 @@ import psutil
 import notify2
 from multiprocessing import Process	
 from multiprocessing import Value,Array #sharing states
-
+import idna
+import webbrowser 
 x_pointer=[0]
-y_pointer=[0]
-fil=['']
+y_pointer=[0]	#dummy pointers for reference 
+fil=['']			
+fil_path=['']
 
 def calc_ul_dl( dt=2, interface='wlo1'):
     t0 = time.time()
@@ -320,9 +322,21 @@ def check_uniqueness(file_path):
 		
 	else :
 		return True
+def folder_open(path):
+	path=path.strip()
+	path=path.split('/')
+	if(len(path)==1):
+		webbrowser.open(os.getcwd())
+	else:
+		p=len(path)
+		f=""
+		for i in range(0,p-1):
+			f+=path[i]
+		webbrowser.open(f)
+	
 #creating a window
 window=tkinter.Tk()
-window.title("Downloader")
+window.title("Multi Downloader")
 window.geometry("800x600")
 window.configure(bg="LemonChiffon3")
 img = tkinter.PhotoImage(file = 'down.ico')
@@ -415,6 +429,8 @@ menu.add_separator()
 menu.add_command(label="Remove From The List ",command=lambda:remove_from_list(List_var))
 menu.add_separator()
 menu.add_command(label="Rename",command=lambda: rename(Menu_var))
+menu.add_separator()
+menu.add_command(label="Open in the Folder",command=lambda:folder_open(Menu_var.get()))
 menu.bind("<FocusOut>",menu.unpost())
 
 menu.configure(bg="white")
